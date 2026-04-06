@@ -1,0 +1,27 @@
+# Variables de entorno
+.env
+
+# Logs
+*.log
+
+# Dependencias futuras
+node_modules/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Temporales
+*.tmp
+*.swp
+
+# Builds futuros
+dist/
+build/
+
+# Bootstrap examples (no usados en el proyecto)
+examples/

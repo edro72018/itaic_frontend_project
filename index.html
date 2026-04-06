@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title></title>
+  <link rel="icon" href="./assets/image.png">
+
+  <!-- Bootstrap -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg bg-body-tertiary rounded">
+  <div class="container-fluid">
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse d-lg-flex" id="navbarMain">
+
+      <!-- IZQUIERDA -->
+      <a class="navbar-brand col-lg-3 me-0" href="#">
+        <img src="assets/image.png" alt="Logo" width="50" height="50" class="d-inline-block align-text-top">
+      </a>
+
+      <!-- CENTRO -->
+      <ul class="navbar-nav col-lg-6 justify-content-lg-center">
+        <li class="nav-item">
+          <a class="nav-link active" href="#">Inicio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#">Pénsum</a>
+        </li>
+      </ul>
+
+      <!-- DERECHA -->
+      <div class="d-lg-flex col-lg-3 justify-content-lg-end">
+
+  <div class="dropdown">
+    <button 
+      class="btn btn-outline-secondary dropdown-toggle"
+      type="button"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+    >
+      👤 <span id="nav-username"></span>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end">
+
+      <li>
+        <a class="dropdown-item" href="#">
+          Perfil
+        </a>
+      </li>
+
+      <li>
+        <a class="dropdown-item" href="#">
+          Calificaciones
+        </a>
+      </li>
+
+      <li><hr class="dropdown-divider"></li>
+
+      <li>
+        <button class="dropdown-item text-danger" id="logout-btn">
+          Cerrar sesión
+        </button>
+      </li>
+
+    </ul>
+  </div>
+
+</div>
+
+    </div>
+  </div>
+</nav>
+
+<!-- CONTENIDO -->
+<main class="flex-grow-1">
+
+  <!-- BIENVENIDA -->
+  <section class="py-5 text-center container">
+    <div class="row py-lg-4">
+      <div class="col-lg-6 col-md-8 mx-auto">
+        <h1 class="fw-light">
+          Bienvenido, <span id="username" >...</span>
+        </h1>
+        <p class="lead text-body-secondary" id="institucion"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CURSOS -->
+  <div class="album py-5 bg-body-tertiary">
+    <div class="container">
+
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="courses-container">
+
+        <!-- EJEMPLO CARD -->
+        <div class="col">
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h5 class="card-title">Curso Explicación</h5>
+              <p class="card-text">Descripción breve del curso.</p>
+              <button class="btn btn-sm btn-primary">Ver curso</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<div id="footer-container"></div>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- APP -->
+<script type="module">
+import { setTitle, loadFooter } from './js/ui.js';
+import { requireAuth, authFetch } from './js/auth.js';
+import { INSTITUCION } from './js/config.js';
+
+setTitle('Inicio');
+requireAuth();
+loadFooter();
+
+// Cargar usuario
+async function cargarUsuario() {
+  try {
+    const response = await authFetch('http://localhost:8000/api/v1/auth/me');
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      const user = result.data;
+      const full_name = `${user.first_name} ${user.last_name}`;
+      user.full_name = full_name;
+
+      document.getElementById('username').textContent = user.full_name;
+      document.getElementById('nav-username').textContent = user.full_name;
+
+      document.getElementById('institucion').textContent =
+        INSTITUCION + ' te da la bienvenida';
+
+    } else {
+      console.error(result);
+    }
+  } catch (error) {
+    console.error('Error al obtener usuario:', error);
+  }
+}
+
+cargarUsuario();
+
+// Logout
+document.getElementById('logout-btn').addEventListener('click', () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  window.location.href = 'login.html';
+});
+
+</script>
+
+</body>
+</html>
