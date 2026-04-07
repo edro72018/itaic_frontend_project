@@ -143,7 +143,7 @@ loadFooter();
 // Cargar usuario
 async function cargarUsuario() {
   try {
-    const response = await authFetch('http://localhost:8000/api/v1/auth/me');
+    const response = await authFetch(`${API_BASE_URL}/auth/me`);
     const result = await response.json();
 
     if (response.ok && result.success) {
