@@ -29,7 +29,7 @@
       alertContainer.innerHTML = '';
 
       try {
-        const response = await fetch(`${API_BASE_URL}/health`);
+        const response = await fetch(`${HEALTH_CHECK_URL}/health`);
 
         if (response.ok) {
           const data = await response.json();
