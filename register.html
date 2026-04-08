@@ -94,12 +94,20 @@
 
             <div class="row g-3 mb-3">
               <div class="col-sm-6">
-                <label for="first-name" class="form-label">Nombre</label>
+                <label for="first-name" class="form-label">Primer Nombre</label>
                 <input type="text" class="form-control" id="first-name" placeholder="Juan" required>
               </div>
               <div class="col-sm-6">
-                <label for="last-name" class="form-label">Apellido</label>
-                <input type="text" class="form-control" id="last-name" placeholder="Pérez" required>
+                <label for="second-name" class="form-label">Segundo Nombre</label>
+                <input type="text" class="form-control" id="second-name" placeholder="Juan" required>
+              </div>
+              <div class="col-sm-6">
+                <label for="first-name" class="form-label">Primer Apellido</label>
+                <input type="text" class="form-control" id="last-name" placeholder="Juan" required>
+              </div>
+              <div class="col-sm-6">
+                <label for="second-last-name" class="form-label">Segundo Apellido</label>
+                <input type="text" class="form-control" id="second-last-name" placeholder="Pérez" required>
               </div>
             </div>
 
@@ -223,7 +231,9 @@ form.addEventListener('submit', async (e) => {
   alertContainer.innerHTML = '';
 
   const firstName = document.getElementById('first-name').value.trim();
+  const secondName = document.getElementById('second-name').value.trim();
   const lastName = document.getElementById('last-name').value.trim();
+  const secondLastName = document.getElementById('second-last-name').value.trim();
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirm-password').value;
@@ -240,11 +250,13 @@ form.addEventListener('submit', async (e) => {
   submitBtn.textContent = 'Registrando...';
 
   try {
-    const response = await authFetch(`${API_BASE_URL}/users`, {
+    const response = await authFetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       body: JSON.stringify({
         first_name: firstName,
+        second_name: secondName,
         last_name: lastName,
+        second_last_name: secondLastName, 
         email,
         password,
         role
