@@ -15,7 +15,6 @@
 
 <div id="navbar-container"></div>
 
-<!-- CONTENIDO -->
 <main class="flex-grow-1">
 
   <!-- BIENVENIDA -->
@@ -26,26 +25,73 @@
           Bienvenido, <span id="username">...</span>
         </h1>
         <p class="lead text-body-secondary" id="institucion"></p>
+
+        <!-- Botón solo para admin/docente -->
+        <a href="manage-courses.html" id="manage-courses-btn" class="btn btn-outline-primary d-none">
+          📚 Gestionar cursos
+        </a>
       </div>
     </div>
   </section>
 
-  <!-- CURSOS -->
-  <div class="album py-5 bg-body-tertiary">
+  <!-- CURSOS (estudiante: tabs; admin/docente: lista simple) -->
+  <div class="bg-body-tertiary py-5">
     <div class="container">
-      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="courses-container">
-        <div class="col-12 text-center py-5">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Cargando cursos...</span>
+
+      <!-- Vista estudiante: tabs -->
+      <div id="student-view" class="d-none">
+        <ul class="nav nav-tabs mb-4" id="courseTabs">
+          <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-mis-cursos">
+              Mis cursos
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-explorar">
+              Explorar
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- Mis cursos (inscritos) -->
+          <div class="tab-pane fade show active" id="tab-mis-cursos">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="enrolled-courses">
+              <div class="col-12 text-center py-4">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Explorar todos los cursos -->
+          <div class="tab-pane fade" id="tab-explorar">
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="all-courses">
+              <div class="col-12 text-center py-4">
+                <div class="spinner-border spinner-border-sm" role="status"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <!-- Vista admin/docente: todos los cursos -->
+      <div id="staff-view" class="d-none">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="mb-0">Todos los cursos</h5>
+          <a href="manage-courses.html" class="btn btn-sm btn-primary">Ver gestión completa →</a>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="staff-courses">
+          <div class="col-12 text-center py-4">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
 </main>
 
-<!-- FOOTER -->
 <div id="footer-container"></div>
 
 <!-- Bootstrap -->
@@ -61,76 +107,169 @@ setTitle('Inicio');
 requireAuth();
 loadFooter();
 
-// Escape HTML para evitar XSS
 function escapeHTML(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
   return div.innerHTML;
 }
 
-// Cargar navbar y reutilizar el usuario que devuelve
-async function init() {
-  const user = await loadNavbar({ activePage: 'inicio' });
+function courseCard(course, { enrolled = false, showEnrollBtn = false } = {}) {
+  const enrolledBadge = enrolled
+    ? `<span class="badge bg-success mb-2">Inscrito</span>`
+    : '';
 
-  if (user) {
-    const fullName = `${user.first_name} ${user.last_name}`;
-    document.getElementById('username').textContent = fullName;
-    document.getElementById('institucion').textContent = `${INSTITUCION} te da la bienvenida`;
+  const actionBtn = showEnrollBtn && !enrolled
+    ? `<button class="btn btn-sm btn-primary mt-2 enroll-btn" data-id="${course.id}">Matricularse</button>`
+    : enrolled
+      ? `<button class="btn btn-sm btn-outline-danger mt-2 unenroll-btn" data-id="${course.id}">Cancelar matrícula</button>`
+      : '';
+
+  return `
+    <div class="col">
+      <div class="card shadow-sm h-100">
+        <div class="card-body d-flex flex-column">
+          ${enrolledBadge}
+          <h5 class="card-title">${escapeHTML(course.name || course.title || 'Sin título')}</h5>
+          <p class="card-text text-body-secondary flex-grow-1">${escapeHTML(course.description || '')}</p>
+          ${actionBtn}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function emptyState(msg) {
+  return `<div class="col-12 text-center py-4 text-body-secondary"><p class="mb-0">${msg}</p></div>`;
+}
+
+function errorState(msg) {
+  return `<div class="col-12 text-center py-4 text-danger"><p class="mb-0">${msg}</p></div>`;
+}
+
+// --- ESTUDIANTE ---
+async function cargarMisCursos() {
+  const container = document.getElementById('enrolled-courses');
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/enrollments/my-courses`);
+    const result = await res.json();
+
+    if (!res.ok || !result.success) throw new Error();
+
+    const courses = Array.isArray(result.data) ? result.data : (result.data?.courses ?? []);
+
+    container.innerHTML = courses.length
+      ? courses.map(c => courseCard(c.course ?? c, { enrolled: true })).join('')
+      : emptyState('No estás inscrito en ningún curso todavía.');
+  } catch {
+    container.innerHTML = errorState('Error al cargar tus cursos.');
   }
 }
 
-// Cargar cursos
-async function cargarCursos() {
-  const container = document.getElementById('courses-container');
-
+async function cargarTodosParaExplorar(enrolledIds) {
+  const container = document.getElementById('all-courses');
   try {
-    const response = await authFetch(`${API_BASE_URL}/courses`);
-    const result = await response.json();
+    const res    = await authFetch(`${API_BASE_URL}/courses`);
+    const result = await res.json();
 
-    if (response.ok && result.success) {
-      const courses = Array.isArray(result.data)
-        ? result.data
-        : (result.data?.courses ?? []);
+    if (!res.ok || !result.success) throw new Error();
 
-      if (courses.length === 0) {
-        container.innerHTML = `
-          <div class="col-12 text-center py-5 text-body-secondary">
-            <p class="mb-0">No tienes cursos asignados aún.</p>
-          </div>
-        `;
-        return;
-      }
+    const courses = Array.isArray(result.data) ? result.data : (result.data?.courses ?? []);
 
-      container.innerHTML = courses.map(course => `
-        <div class="col">
-          <div class="card shadow-sm h-100">
-            <div class="card-body d-flex flex-column">
-              <h5 class="card-title">${escapeHTML(course.name || course.title || 'Sin título')}</h5>
-              <p class="card-text text-body-secondary flex-grow-1">${escapeHTML(course.description || '')}</p>
-              <button class="btn btn-sm btn-primary mt-2">Ver curso</button>
-            </div>
-          </div>
-        </div>
-      `).join('');
+    container.innerHTML = courses.length
+      ? courses.map(c => courseCard(c, {
+          enrolled: enrolledIds.has(c.id),
+          showEnrollBtn: true
+        })).join('')
+      : emptyState('No hay cursos disponibles aún.');
+  } catch {
+    container.innerHTML = errorState('Error al cargar los cursos.');
+  }
+}
+
+async function obtenerEnrolledIds() {
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/enrollments/my-courses`);
+    const result = await res.json();
+    if (!res.ok || !result.success) return new Set();
+    const courses = Array.isArray(result.data) ? result.data : (result.data?.courses ?? []);
+    return new Set(courses.map(c => (c.course ?? c).id));
+  } catch {
+    return new Set();
+  }
+}
+
+// --- ADMIN / DOCENTE ---
+async function cargarCursosStaff() {
+  const container = document.getElementById('staff-courses');
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/courses`);
+    const result = await res.json();
+
+    if (!res.ok || !result.success) throw new Error();
+
+    const courses = Array.isArray(result.data) ? result.data : (result.data?.courses ?? []);
+
+    container.innerHTML = courses.length
+      ? courses.map(c => courseCard(c)).join('')
+      : emptyState('No hay cursos creados todavía.');
+  } catch {
+    container.innerHTML = errorState('Error al cargar los cursos.');
+  }
+}
+
+// --- MATRÍCULA / CANCELAR ---
+async function manejarMatricula(courseId, action) {
+  const method = action === 'enroll' ? 'POST' : 'DELETE';
+  try {
+    const res = await authFetch(`${API_BASE_URL}/enrollments/${courseId}`, { method });
+    const result = await res.json();
+    if (res.ok && result.success) {
+      // Recargar ambas secciones
+      cargarMisCursos();
+      obtenerEnrolledIds().then(ids => cargarTodosParaExplorar(ids));
     } else {
-      container.innerHTML = `
-        <div class="col-12 text-center py-5 text-danger">
-          <p class="mb-0">No se pudieron cargar los cursos.</p>
-        </div>
-      `;
+      alert(result.message || 'No se pudo completar la acción.');
     }
-  } catch (error) {
-    console.error('Error al cargar cursos:', error);
-    container.innerHTML = `
-      <div class="col-12 text-center py-5 text-danger">
-        <p class="mb-0">Error de conexión al cargar los cursos.</p>
-      </div>
-    `;
+  } catch {
+    alert('Error de conexión.');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('enroll-btn')) {
+    manejarMatricula(e.target.dataset.id, 'enroll');
+  }
+  if (e.target.classList.contains('unenroll-btn')) {
+    manejarMatricula(e.target.dataset.id, 'unenroll');
+  }
+});
+
+// --- INIT ---
+async function init() {
+  const user = await loadNavbar({ activePage: 'inicio' });
+  if (!user) return;
+
+  const fullName = `${user.first_name} ${user.last_name}`;
+  document.getElementById('username').textContent = fullName;
+  document.getElementById('institucion').textContent = `${INSTITUCION} te da la bienvenida`;
+
+  const isStudent = user.role === 'student';
+  const isStaff   = user.role === 'admin' || user.role === 'teacher' || user.is_admin === true;
+
+  if (isStaff) {
+    document.getElementById('manage-courses-btn').classList.remove('d-none');
+    document.getElementById('staff-view').classList.remove('d-none');
+    cargarCursosStaff();
+  }
+
+  if (isStudent) {
+    document.getElementById('student-view').classList.remove('d-none');
+    cargarMisCursos();
+    obtenerEnrolledIds().then(ids => cargarTodosParaExplorar(ids));
   }
 }
 
 init();
-cargarCursos();
 </script>
 
 </body>

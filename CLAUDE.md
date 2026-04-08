@@ -19,24 +19,31 @@ Es un sitio estático desplegado en **GitHub Pages**, rama `deploy`.
 
 ### Endpoints conocidos
 
-| Método | Ruta              | Uso                              |
-|--------|-------------------|----------------------------------|
-| POST   | `/auth/login`     | Iniciar sesión                   |
-| GET    | `/auth/me`        | Obtener usuario autenticado      |
-| GET    | `/courses`        | Listar cursos del usuario        |
-| POST   | `/users`          | Crear usuario (requiere admin)   |
-
-> **Nota:** El endpoint de registro (`POST /users`) puede diferir. Ajustar en `register.html` si la API usa otra ruta (ej. `/auth/register`).
+| Método   | Ruta                                  | Uso                                    |
+|----------|---------------------------------------|----------------------------------------|
+| POST     | `/auth/register`                      | Registrar usuario (admin)              |
+| POST     | `/auth/login`                         | Iniciar sesión                         |
+| GET      | `/auth/me`                            | Obtener usuario autenticado            |
+| GET      | `/courses`                            | Listar todos los cursos                |
+| POST     | `/courses`                            | Crear curso (admin/docente)            |
+| GET      | `/courses/{id}`                       | Detalle de un curso                    |
+| PUT      | `/courses/{id}`                       | Actualizar curso (admin/docente)       |
+| DELETE   | `/courses/{id}`                       | Eliminar curso (admin/docente)         |
+| POST     | `/enrollments/{course_id}`            | Matricularse en un curso               |
+| DELETE   | `/enrollments/{course_id}`            | Cancelar matrícula                     |
+| GET      | `/enrollments/my-courses`             | Cursos en los que está inscrito        |
+| GET      | `/enrollments/{course_id}/students`   | Estudiantes inscritos en un curso      |
 
 ## Estructura de archivos
 
 ```
 /
-├── index.html        # Dashboard principal (cursos, bienvenida)
-├── login.html        # Formulario de inicio de sesión
-├── profile.html      # Perfil del usuario autenticado
-├── register.html     # Registro de usuarios (solo admin)
-├── health.html       # Diagnóstico de conexión a la API
+├── index.html            # Dashboard: estudiante (mis cursos + explorar), admin/docente (overview)
+├── login.html            # Formulario de inicio de sesión
+├── profile.html          # Perfil del usuario autenticado
+├── register.html         # Registro de usuarios (solo admin)
+├── manage-courses.html   # Gestión de cursos (admin/docente): crear, editar, eliminar, ver inscritos
+├── health.html           # Diagnóstico de conexión a la API
 ├── assets/
 │   └── image.png     # Logo de la institución
 ├── js/

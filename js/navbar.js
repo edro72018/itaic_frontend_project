@@ -7,14 +7,13 @@ import { initTheme, toggleTheme, getTheme } from './theme.js';
  * carga el usuario autenticado y devuelve el objeto user.
  *
  * @param {Object} options
- * @param {string} options.activePage - 'inicio' | 'pensum' | 'perfil' | 'registro'
+ * @param {string} options.activePage - 'inicio' | 'pensum' | 'perfil' | 'registro' | 'cursos'
  * @returns {Promise<Object|null>} Objeto user de la API, o null si falla
  */
 export async function loadNavbar({ activePage = '' } = {}) {
   const container = document.getElementById('navbar-container');
   if (!container) return null;
 
-  // Aplicar tema antes de renderizar para evitar flash
   initTheme();
 
   const isActive = (page) => activePage === page ? 'active' : '';
@@ -65,7 +64,15 @@ export async function loadNavbar({ activePage = '' } = {}) {
                   <a class="dropdown-item ${isActive('calificaciones')}" href="#">Calificaciones</a>
                 </li>
 
-                <li id="admin-divider" class="d-none"><hr class="dropdown-divider"></li>
+                <!-- Admin y Docente -->
+                <li id="staff-divider" class="d-none"><hr class="dropdown-divider"></li>
+                <li id="manage-courses-item" class="d-none">
+                  <a class="dropdown-item ${isActive('cursos')}" href="manage-courses.html">
+                    📚 Gestionar cursos
+                  </a>
+                </li>
+
+                <!-- Solo Admin -->
                 <li id="admin-register-item" class="d-none">
                   <a class="dropdown-item text-warning ${isActive('registro')}" href="register.html">
                     ⚙️ Registrar usuario
@@ -87,7 +94,6 @@ export async function loadNavbar({ activePage = '' } = {}) {
     </nav>
   `;
 
-  // Tema
   function updateThemeIcon() {
     document.getElementById('theme-icon').textContent = getTheme() === 'dark' ? '☀️' : '🌙';
   }
@@ -99,10 +105,8 @@ export async function loadNavbar({ activePage = '' } = {}) {
     updateThemeIcon();
   });
 
-  // Logout
   document.getElementById('logout-btn').addEventListener('click', logout);
 
-  // Cargar usuario
   try {
     const response = await authFetch(`${API_BASE_URL}/auth/me`);
     const result = await response.json();
@@ -112,9 +116,15 @@ export async function loadNavbar({ activePage = '' } = {}) {
       const displayName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim();
       document.getElementById('nav-username').textContent = displayName;
 
-      const isAdmin = user.role === 'admin' || user.is_admin === true;
+      const isAdmin   = user.role === 'admin'   || user.is_admin === true;
+      const isTeacher = user.role === 'teacher';
+
+      if (isAdmin || isTeacher) {
+        document.getElementById('staff-divider').classList.remove('d-none');
+        document.getElementById('manage-courses-item').classList.remove('d-none');
+      }
+
       if (isAdmin) {
-        document.getElementById('admin-divider').classList.remove('d-none');
         document.getElementById('admin-register-item').classList.remove('d-none');
       }
 

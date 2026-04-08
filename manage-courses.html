@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+  <link rel="icon" href="./assets/image.png">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+<div id="navbar-container"></div>
+
+<main class="flex-grow-1 py-5">
+  <div class="container">
+
+    <!-- Acceso denegado -->
+    <div id="access-denied" class="d-none text-center py-5">
+      <h2 class="text-danger">Acceso denegado</h2>
+      <p class="text-body-secondary">Solo administradores y docentes pueden gestionar cursos.</p>
+      <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+    </div>
+
+    <!-- Contenido principal -->
+    <div id="main-section" class="d-none">
+
+      <!-- Encabezado -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Gestión de cursos</h2>
+        <button class="btn btn-primary" id="btn-nuevo-curso" data-bs-toggle="modal" data-bs-target="#modalCurso">
+          + Nuevo curso
+        </button>
+      </div>
+
+      <!-- Alerta global -->
+      <div id="alert-global" class="mb-3"></div>
+
+      <!-- Lista de cursos -->
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="courses-list">
+        <div class="col-12 text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Cargando cursos...</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Spinner inicial -->
+    <div id="loading-section" class="text-center py-5">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- MODAL CREAR / EDITAR CURSO -->
+<div class="modal fade" id="modalCurso" tabindex="-1" aria-labelledby="modalCursoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCursoLabel">Nuevo curso</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-alert" class="mb-3"></div>
+        <form id="course-form">
+          <input type="hidden" id="course-id">
+          <div class="mb-3">
+            <label for="course-name" class="form-label">Nombre del curso</label>
+            <input type="text" class="form-control" id="course-name" placeholder="Ej: Teología Sistemática I" required>
+          </div>
+          <div class="mb-3">
+            <label for="course-description" class="form-label">Descripción</label>
+            <textarea class="form-control" id="course-description" rows="3" placeholder="Descripción breve del curso..."></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-guardar-curso">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESTUDIANTES INSCRITOS -->
+<div class="modal fade" id="modalEstudiantes" tabindex="-1" aria-labelledby="modalEstudiantesLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalEstudiantesLabel">Estudiantes inscritos</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="students-list">
+          <div class="text-center py-3">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div id="footer-container"></div>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+import { setTitle, loadFooter } from './js/ui.js';
+import { requireAuth, authFetch } from './js/auth.js';
+import { API_BASE_URL } from './js/config.js';
+import { loadNavbar } from './js/navbar.js';
+
+setTitle('Gestionar Cursos');
+requireAuth();
+loadFooter();
+
+const modalCursoEl      = document.getElementById('modalCurso');
+const modalCurso        = new bootstrap.Modal(modalCursoEl);
+const modalEstudiantes  = new bootstrap.Modal(document.getElementById('modalEstudiantes'));
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+function showAlert(containerId, message, type = 'danger') {
+  document.getElementById(containerId).innerHTML = `
+    <div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+}
+
+// --- LISTAR CURSOS ---
+async function cargarCursos() {
+  const container = document.getElementById('courses-list');
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/courses`);
+    const result = await res.json();
+
+    if (!res.ok || !result.success) throw new Error(result.message || 'Error al cargar cursos');
+
+    const courses = Array.isArray(result.data) ? result.data : (result.data?.courses ?? []);
+
+    if (courses.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5 text-body-secondary">
+          <p class="mb-0">No hay cursos creados todavía.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = courses.map(course => `
+      <div class="col" id="course-card-${course.id}">
+        <div class="card shadow-sm h-100">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">${escapeHTML(course.name || course.title || 'Sin título')}</h5>
+            <p class="card-text text-body-secondary flex-grow-1">${escapeHTML(course.description || '')}</p>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+              <button
+                class="btn btn-sm btn-outline-secondary btn-ver-estudiantes"
+                data-id="${course.id}"
+                data-name="${escapeHTML(course.name || course.title || '')}"
+              >
+                👥 Estudiantes
+              </button>
+              <button
+                class="btn btn-sm btn-outline-primary btn-editar"
+                data-id="${course.id}"
+                data-name="${escapeHTML(course.name || course.title || '')}"
+                data-description="${escapeHTML(course.description || '')}"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                class="btn btn-sm btn-outline-danger btn-eliminar"
+                data-id="${course.id}"
+                data-name="${escapeHTML(course.name || course.title || '')}"
+              >
+                🗑️ Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    container.innerHTML = `
+      <div class="col-12 text-center py-5 text-danger">
+        <p class="mb-0">${err.message || 'Error de conexión.'}</p>
+      </div>
+    `;
+  }
+}
+
+// --- CREAR / EDITAR ---
+document.getElementById('btn-nuevo-curso').addEventListener('click', () => {
+  document.getElementById('modalCursoLabel').textContent = 'Nuevo curso';
+  document.getElementById('course-id').value = '';
+  document.getElementById('course-name').value = '';
+  document.getElementById('course-description').value = '';
+  document.getElementById('modal-alert').innerHTML = '';
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('btn-editar')) {
+    const { id, name, description } = e.target.dataset;
+    document.getElementById('modalCursoLabel').textContent = 'Editar curso';
+    document.getElementById('course-id').value = id;
+    document.getElementById('course-name').value = name;
+    document.getElementById('course-description').value = description;
+    document.getElementById('modal-alert').innerHTML = '';
+    modalCurso.show();
+  }
+
+  if (e.target.classList.contains('btn-eliminar')) {
+    const { id, name } = e.target.dataset;
+    if (confirm(`¿Eliminar el curso "${name}"? Esta acción no se puede deshacer.`)) {
+      eliminarCurso(id);
+    }
+  }
+
+  if (e.target.classList.contains('btn-ver-estudiantes')) {
+    const { id, name } = e.target.dataset;
+    document.getElementById('modalEstudiantesLabel').textContent = `Estudiantes — ${name}`;
+    document.getElementById('students-list').innerHTML = `
+      <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+      </div>
+    `;
+    modalEstudiantes.show();
+    cargarEstudiantes(id);
+  }
+});
+
+document.getElementById('btn-guardar-curso').addEventListener('click', async () => {
+  const id          = document.getElementById('course-id').value;
+  const name        = document.getElementById('course-name').value.trim();
+  const description = document.getElementById('course-description').value.trim();
+
+  if (!name) {
+    showAlert('modal-alert', 'El nombre del curso es obligatorio.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('btn-guardar-curso');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  const isEdit = !!id;
+  const method = isEdit ? 'PUT' : 'POST';
+  const url    = isEdit
+    ? `${API_BASE_URL}/courses/${id}`
+    : `${API_BASE_URL}/courses`;
+
+  try {
+    const res    = await authFetch(url, { method, body: JSON.stringify({ name, description }) });
+    const result = await res.json();
+
+    if (res.ok && result.success) {
+      modalCurso.hide();
+      showAlert('alert-global', `Curso ${isEdit ? 'actualizado' : 'creado'} exitosamente.`, 'success');
+      cargarCursos();
+    } else {
+      showAlert('modal-alert', result.message || 'No se pudo guardar el curso.');
+    }
+  } catch {
+    showAlert('modal-alert', 'Error de conexión.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Guardar';
+  }
+});
+
+// --- ELIMINAR ---
+async function eliminarCurso(id) {
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/courses/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+
+    if (res.ok && result.success) {
+      showAlert('alert-global', 'Curso eliminado.', 'success');
+      cargarCursos();
+    } else {
+      showAlert('alert-global', result.message || 'No se pudo eliminar el curso.');
+    }
+  } catch {
+    showAlert('alert-global', 'Error de conexión al eliminar.');
+  }
+}
+
+// --- ESTUDIANTES INSCRITOS ---
+async function cargarEstudiantes(courseId) {
+  const container = document.getElementById('students-list');
+  try {
+    const res    = await authFetch(`${API_BASE_URL}/enrollments/${courseId}/students`);
+    const result = await res.json();
+
+    if (!res.ok || !result.success) throw new Error(result.message);
+
+    const students = Array.isArray(result.data) ? result.data : (result.data?.students ?? []);
+
+    if (students.length === 0) {
+      container.innerHTML = `<p class="text-body-secondary text-center mb-0">Ningún estudiante inscrito aún.</p>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Inscrito el</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${students.map(s => {
+            const student = s.student ?? s;
+            const fullName = [student.first_name, student.second_name, student.last_name, student.second_last_name]
+              .filter(Boolean).join(' ');
+            const date = s.enrolled_at
+              ? new Date(s.enrolled_at).toLocaleDateString('es', { year: 'numeric', month: 'short', day: 'numeric' })
+              : '—';
+            return `
+              <tr>
+                <td>${escapeHTML(fullName || '—')}</td>
+                <td>${escapeHTML(student.email || '—')}</td>
+                <td>${date}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (err) {
+    container.innerHTML = `<p class="text-danger text-center mb-0">${err.message || 'Error al cargar estudiantes.'}</p>`;
+  }
+}
+
+// --- INIT ---
+async function init() {
+  const loadingSection = document.getElementById('loading-section');
+  const mainSection    = document.getElementById('main-section');
+  const accessDenied   = document.getElementById('access-denied');
+
+  const user = await loadNavbar({ activePage: 'cursos' });
+
+  loadingSection.classList.add('d-none');
+
+  if (!user) {
+    accessDenied.classList.remove('d-none');
+    return;
+  }
+
+  const isAdmin   = user.role === 'admin' || user.is_admin === true;
+  const isTeacher = user.role === 'teacher';
+
+  if (!isAdmin && !isTeacher) {
+    accessDenied.classList.remove('d-none');
+    return;
+  }
+
+  mainSection.classList.remove('d-none');
+  cargarCursos();
+}
+
+init();
+</script>
+
+</body>
+</html>
