@@ -13,74 +13,20 @@
 
 <body class="d-flex flex-column min-vh-100">
 
-<!-- NAVBAR -->
-<nav class="navbar navbar-expand-lg bg-body-tertiary rounded">
-  <div class="container-fluid">
-
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse d-lg-flex" id="navbarMain">
-
-      <!-- IZQUIERDA -->
-      <a class="navbar-brand col-lg-3 me-0" href="index.html">
-        <img src="assets/image.png" alt="Logo" width="50" height="50" class="d-inline-block align-text-top">
-      </a>
-
-      <!-- CENTRO -->
-      <ul class="navbar-nav col-lg-6 justify-content-lg-center">
-        <li class="nav-item">
-          <a class="nav-link" href="index.html">Inicio</a>
-        </li>
-      </ul>
-
-      <!-- DERECHA -->
-      <div class="d-lg-flex col-lg-3 justify-content-lg-end align-items-center gap-2">
-
-        <!-- TOGGLE TEMA -->
-        <button class="btn btn-outline-secondary" id="theme-toggle" title="Cambiar tema">
-          <span id="theme-icon"></span>
-        </button>
-
-        <!-- MENÚ USUARIO -->
-        <div class="dropdown">
-          <button
-            class="btn btn-outline-secondary dropdown-toggle"
-            type="button"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-          >
-            👤 <span id="nav-username"></span>
-          </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#">Perfil</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <button class="dropdown-item text-danger" id="logout-btn">
-                Cerrar sesión
-              </button>
-            </li>
-          </ul>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</nav>
+<div id="navbar-container"></div>
 
 <!-- CONTENIDO -->
 <main class="flex-grow-1 py-5">
   <div class="container">
 
-    <!-- Acceso denegado (oculto por defecto, se muestra si no es admin) -->
+    <!-- Acceso denegado -->
     <div id="access-denied" class="d-none text-center py-5">
       <h2 class="text-danger">Acceso denegado</h2>
       <p class="text-body-secondary">Solo los administradores pueden registrar nuevos usuarios.</p>
       <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
     </div>
 
-    <!-- Formulario de registro (oculto hasta verificar admin) -->
+    <!-- Formulario de registro -->
     <div id="register-section" class="d-none">
       <div class="row justify-content-center">
         <div class="col-lg-6 col-md-8">
@@ -102,7 +48,7 @@
                 <input type="text" class="form-control" id="second-name" placeholder="José" required>
               </div>
               <div class="col-sm-6">
-                <label for="first-name" class="form-label">Primer Apellido</label>
+                <label for="last-name" class="form-label">Primer Apellido</label>
                 <input type="text" class="form-control" id="last-name" placeholder="Pérez" required>
               </div>
               <div class="col-sm-6">
@@ -150,7 +96,7 @@
       </div>
     </div>
 
-    <!-- Spinner mientras verifica sesión -->
+    <!-- Spinner mientras verifica -->
     <div id="loading-section" class="text-center py-5">
       <div class="spinner-border" role="status">
         <span class="visually-hidden">Verificando permisos...</span>
@@ -168,81 +114,58 @@
 
 <script type="module">
 import { setTitle, loadFooter } from './js/ui.js';
-import { requireAuth, authFetch, logout } from './js/auth.js';
+import { requireAuth, authFetch } from './js/auth.js';
 import { API_BASE_URL } from './js/config.js';
-import { initTheme, toggleTheme, getTheme } from './js/theme.js';
+import { loadNavbar } from './js/navbar.js';
 
 setTitle('Registrar Usuario');
 requireAuth();
 loadFooter();
-initTheme();
 
-// --- TEMA ---
-function updateThemeIcon() {
-  document.getElementById('theme-icon').textContent = getTheme() === 'dark' ? '☀️' : '🌙';
-}
-
-updateThemeIcon();
-
-document.getElementById('theme-toggle').addEventListener('click', () => {
-  toggleTheme();
-  updateThemeIcon();
-});
-
-// --- VERIFICAR ADMIN ---
-async function verificarAdmin() {
-  const loadingSection = document.getElementById('loading-section');
+async function init() {
+  const loadingSection  = document.getElementById('loading-section');
   const registerSection = document.getElementById('register-section');
-  const accessDenied = document.getElementById('access-denied');
+  const accessDenied    = document.getElementById('access-denied');
 
-  try {
-    const response = await authFetch(`${API_BASE_URL}/auth/me`);
-    const result = await response.json();
+  // loadNavbar devuelve el usuario y ya verifica /auth/me
+  const user = await loadNavbar({ activePage: 'registro' });
 
-    if (response.ok && result.success) {
-      const user = result.data;
-      const fullName = `${user.first_name} ${user.last_name}`;
-      document.getElementById('nav-username').textContent = fullName;
+  loadingSection.classList.add('d-none');
 
-      const isAdmin = user.role === 'admin' || user.is_admin === true;
+  if (!user) {
+    accessDenied.classList.remove('d-none');
+    return;
+  }
 
-      loadingSection.classList.add('d-none');
+  const isAdmin = user.role === 'admin' || user.is_admin === true;
 
-      if (isAdmin) {
-        registerSection.classList.remove('d-none');
-      } else {
-        accessDenied.classList.remove('d-none');
-      }
-    }
-  } catch (error) {
-    console.error('Error al verificar permisos:', error);
-    loadingSection.classList.add('d-none');
+  if (isAdmin) {
+    registerSection.classList.remove('d-none');
+  } else {
     accessDenied.classList.remove('d-none');
   }
 }
 
 // --- FORMULARIO ---
-const form = document.getElementById('register-form');
+const form           = document.getElementById('register-form');
 const alertContainer = document.getElementById('alert-container');
-const submitBtn = document.getElementById('submit-btn');
+const submitBtn      = document.getElementById('submit-btn');
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   alertContainer.innerHTML = '';
 
-  const firstName = document.getElementById('first-name').value.trim();
-  const secondName = document.getElementById('second-name').value.trim();
-  const lastName = document.getElementById('last-name').value.trim();
+  const firstName     = document.getElementById('first-name').value.trim();
+  const secondName    = document.getElementById('second-name').value.trim();
+  const lastName      = document.getElementById('last-name').value.trim();
   const secondLastName = document.getElementById('second-last-name').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+  const email         = document.getElementById('email').value.trim();
+  const password      = document.getElementById('password').value;
   const confirmPassword = document.getElementById('confirm-password').value;
-  const role = document.getElementById('role').value;
+  const role          = document.getElementById('role').value;
 
   if (password !== confirmPassword) {
-    alertContainer.innerHTML = `
-      <div class="alert alert-warning">Las contraseñas no coinciden.</div>
-    `;
+    alertContainer.innerHTML = `<div class="alert alert-warning">Las contraseñas no coinciden.</div>`;
     return;
   }
 
@@ -256,7 +179,7 @@ form.addEventListener('submit', async (e) => {
         first_name: firstName,
         second_name: secondName,
         last_name: lastName,
-        second_last_name: secondLastName, 
+        second_last_name: secondLastName,
         email,
         password,
         role
@@ -281,20 +204,14 @@ form.addEventListener('submit', async (e) => {
     }
   } catch (error) {
     console.error('Error al registrar usuario:', error);
-    alertContainer.innerHTML = `
-      <div class="alert alert-danger">Error de conexión al registrar el usuario.</div>
-    `;
+    alertContainer.innerHTML = `<div class="alert alert-danger">Error de conexión al registrar el usuario.</div>`;
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Registrar usuario';
   }
 });
 
-// --- LOGOUT ---
-document.getElementById('logout-btn').addEventListener('click', logout);
-
-// --- INIT ---
-verificarAdmin();
+init();
 </script>
 
 </body>

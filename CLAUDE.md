@@ -34,6 +34,7 @@ Es un sitio estático desplegado en **GitHub Pages**, rama `deploy`.
 /
 ├── index.html        # Dashboard principal (cursos, bienvenida)
 ├── login.html        # Formulario de inicio de sesión
+├── profile.html      # Perfil del usuario autenticado
 ├── register.html     # Registro de usuarios (solo admin)
 ├── health.html       # Diagnóstico de conexión a la API
 ├── assets/
@@ -42,10 +43,20 @@ Es un sitio estático desplegado en **GitHub Pages**, rama `deploy`.
 │   ├── config.js     # Constantes globales (URLs, nombre institución)
 │   ├── auth.js       # Token management, authFetch, requireAuth, logout
 │   ├── ui.js         # setTitle(), loadFooter()
-│   └── theme.js      # initTheme(), toggleTheme(), getTheme()
+│   ├── theme.js      # initTheme(), toggleTheme(), getTheme()
+│   └── navbar.js     # loadNavbar({ activePage }) — inyecta navbar, carga usuario, devuelve user
 ├── CLAUDE.md         # Este archivo
 └── .gitignore
 ```
+
+## Convención de componentes compartidos
+
+**No copiar HTML entre páginas.** Los componentes que se repiten (navbar, footer) viven en módulos JS:
+
+- `loadNavbar({ activePage })` — inyecta el navbar en `#navbar-container`, inicializa el tema, configura logout y devuelve el objeto `user` de la API. Las páginas reutilizan ese `user` sin hacer una segunda llamada a `/auth/me`.
+- `loadFooter()` — inyecta el footer en `#footer-container`.
+
+Cada página HTML solo tiene `<div id="navbar-container"></div>` y llama a `loadNavbar()`.
 
 ## Estructura de respuesta de la API
 

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+  <link rel="icon" href="./assets/image.png">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  />
+  <style>
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      font-size: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+<div id="navbar-container"></div>
+
+<!-- CONTENIDO -->
+<main class="flex-grow-1 py-5">
+  <div class="container">
+
+    <!-- Spinner -->
+    <div id="loading-section" class="text-center py-5">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Cargando perfil...</span>
+      </div>
+    </div>
+
+    <!-- Perfil -->
+    <div id="profile-section" class="d-none">
+      <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+          <!-- Encabezado -->
+          <div class="d-flex align-items-center gap-4 mb-4">
+            <div class="profile-avatar rounded-circle bg-primary text-white flex-shrink-0" id="avatar-initials"></div>
+            <div>
+              <h2 class="mb-0" id="profile-fullname"></h2>
+              <span class="badge rounded-pill mt-1" id="profile-role-badge"></span>
+            </div>
+          </div>
+
+          <!-- Datos -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Información personal</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="text-body-secondary">Primer nombre</span>
+                <span id="profile-first-name" class="fw-medium"></span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-center" id="row-second-name">
+                <span class="text-body-secondary">Segundo nombre</span>
+                <span id="profile-second-name" class="fw-medium"></span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="text-body-secondary">Primer apellido</span>
+                <span id="profile-last-name" class="fw-medium"></span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-center" id="row-second-last-name">
+                <span class="text-body-secondary">Segundo apellido</span>
+                <span id="profile-second-last-name" class="fw-medium"></span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span class="text-body-secondary">Correo electrónico</span>
+                <span id="profile-email" class="fw-medium"></span>
+              </li>
+
+              <li class="list-group-item d-flex justify-content-between align-items-center" id="row-created-at">
+                <span class="text-body-secondary">Miembro desde</span>
+                <span id="profile-created-at" class="fw-medium"></span>
+              </li>
+
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="error-section" class="d-none text-center py-5">
+      <p class="text-danger">No se pudo cargar el perfil.</p>
+      <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<div id="footer-container"></div>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+import { setTitle, loadFooter } from './js/ui.js';
+import { requireAuth } from './js/auth.js';
+import { loadNavbar } from './js/navbar.js';
+
+setTitle('Mi Perfil');
+requireAuth();
+loadFooter();
+
+const ROLE_LABELS = {
+  admin:   { label: 'Administrador', cls: 'bg-danger'   },
+  teacher: { label: 'Docente',       cls: 'bg-success'  },
+  student: { label: 'Estudiante',    cls: 'bg-primary'  },
+};
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  return new Date(dateStr).toLocaleDateString('es', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  });
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value ?? '';
+}
+
+async function init() {
+  const loadingSection = document.getElementById('loading-section');
+  const profileSection = document.getElementById('profile-section');
+  const errorSection   = document.getElementById('error-section');
+
+  // loadNavbar ya consulta /auth/me y devuelve el usuario
+  const user = await loadNavbar({ activePage: 'perfil' });
+
+  if (!user) {
+    loadingSection.classList.add('d-none');
+    errorSection.classList.remove('d-none');
+    return;
+  }
+
+  // Nombre completo
+  const fullName = [user.first_name, user.second_name, user.last_name, user.second_last_name]
+    .filter(Boolean)
+    .join(' ');
+
+  // Iniciales para el avatar
+  const initials = [user.first_name, user.last_name]
+    .filter(Boolean)
+    .map(n => n[0].toUpperCase())
+    .join('');
+
+  document.getElementById('avatar-initials').textContent = initials;
+  setText('profile-fullname', fullName);
+
+  // Badge de rol
+  const roleInfo = ROLE_LABELS[user.role] ?? { label: user.role ?? 'Usuario', cls: 'bg-secondary' };
+  const badge = document.getElementById('profile-role-badge');
+  badge.textContent = roleInfo.label;
+  badge.classList.add(roleInfo.cls);
+
+  // Campos
+  setText('profile-first-name', user.first_name);
+  setText('profile-last-name', user.last_name);
+  setText('profile-email', user.email);
+
+  if (user.second_name) {
+    setText('profile-second-name', user.second_name);
+  } else {
+    document.getElementById('row-second-name').classList.add('d-none');
+  }
+
+  if (user.second_last_name) {
+    setText('profile-second-last-name', user.second_last_name);
+  } else {
+    document.getElementById('row-second-last-name').classList.add('d-none');
+  }
+
+  const createdAt = formatDate(user.created_at);
+  if (createdAt) {
+    setText('profile-created-at', createdAt);
+  } else {
+    document.getElementById('row-created-at').classList.add('d-none');
+  }
+
+  loadingSection.classList.add('d-none');
+  profileSection.classList.remove('d-none');
+}
+
+init();
+</script>
+
+</body>
+</html>
