@@ -24,12 +24,14 @@
         <h1 class="fw-light">
           Bienvenido, <span id="username">...</span>
         </h1>
-        <p class="lead text-body-secondary" id="institucion"></p>
+        <p class="lead text-body-secondary" id="institucion">Te da la bienvenida.</p>
 
         <!-- Botón solo para admin/docente -->
+
+        <!--
         <a href="manage-courses.html" id="manage-courses-btn" class="btn btn-outline-primary d-none">
-          📚 Gestionar cursos
         </a>
+        -->
       </div>
     </div>
   </section>
@@ -78,7 +80,9 @@
       <div id="staff-view" class="d-none">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h5 class="mb-0">Todos los cursos</h5>
-          <a href="manage-courses.html" class="btn btn-sm btn-primary">Ver gestión completa →</a>
+          <a href="manage-courses.html" id="manage-courses-btn" class="btn btn-outline-primary d-none">
+            Gestionar Cursos
+          </a>
         </div>
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="staff-courses">
           <div class="col-12 text-center py-4">
