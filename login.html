@@ -3,21 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title></title>
-
-  <!-- Bootstrap -->
+  <link rel="icon" href="assets/image.png">
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
     rel="stylesheet"
   />
-  <link rel="icon" href="assets/image.png">
-
-  <!-- Estilo tipo Bootstrap Sign-in -->
   <style>
-    html, body {
-      height: 100%;
-    }
+    html, body { height: 100%; }
 
     body {
       display: flex;
@@ -32,9 +25,7 @@
       padding: 15px;
     }
 
-    .form-signin .form-floating:focus-within {
-      z-index: 2;
-    }
+    .form-signin .form-floating:focus-within { z-index: 2; }
 
     .form-signin input[type="email"] {
       margin-bottom: -1px;
@@ -48,20 +39,15 @@
       border-top-right-radius: 0;
     }
   </style>
-
 </head>
 
 <body class="text-center d-flex flex-column min-vh-100">
 
   <main class="form-signin w-100 m-auto">
-
     <form id="login-form">
-
       <img class="mb-4" src="assets/image.png" alt="ITAIC" width="72">
 
-      <h1 class="h5 mb-3 fw-normal">
-        Instituto Teológico De Las Asambleas De Iglesias Cristianas
-      </h1>
+      <h1 class="h5 mb-3 fw-normal" id="institution-name"></h1>
 
       <div class="form-floating">
         <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
@@ -69,38 +55,44 @@
       </div>
 
       <div class="form-floating">
-        <input type="password" class="form-control" id="password" placeholder="Password" required>
+        <input type="password" class="form-control" id="password" placeholder="Contraseña" required>
         <label for="password">Contraseña</label>
       </div>
 
-      <!-- ALERTAS -->
       <div id="alert-container" class="my-2"></div>
 
-      <button class="w-100 btn btn-lg btn-primary mt-2" type="submit">
+      <button class="w-100 btn btn-lg btn-primary mt-2" type="submit" id="submit-btn">
         Iniciar sesión
       </button>
-
     </form>
-
   </main>
 
-  <!-- Footer dinámico -->
   <div id="footer-container" class="mt-auto"></div>
 
   <!-- Bootstrap -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- LOGIN -->
-  <script>
-    const form = document.getElementById('login-form');
-    const alertContainer = document.getElementById('alert-container');
+  <script type="module">
+    import { setTitle, loadFooter } from './js/ui.js';
+    import { INSTITUCION, API_BASE_URL } from './js/config.js';
+    import { setToken } from './js/auth.js';
+    import { initTheme } from './js/theme.js';
 
+    setTitle('Iniciar Sesión');
+    loadFooter();
+    initTheme();
+
+    document.getElementById('institution-name').textContent = INSTITUCION;
+
+    // Redirigir si ya tiene sesión
     const token = localStorage.getItem('token');
-
-    //  Si ya está logueado
-    if (token && token !== "undefined" && token !== "null") {
+    if (token && token !== 'undefined' && token !== 'null') {
       window.location.href = 'index.html';
     }
+
+    const form = document.getElementById('login-form');
+    const alertContainer = document.getElementById('alert-container');
+    const submitBtn = document.getElementById('submit-btn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -109,24 +101,22 @@
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
 
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Iniciando sesión...';
+
       try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
 
         const data = await response.json();
 
         if (response.ok && data.success) {
-
-          localStorage.setItem('token', data.data.access_token);
+          setToken(data.data.access_token);
           localStorage.setItem('user', JSON.stringify(data.data.user));
-
           window.location.href = 'index.html';
-
         } else {
           alertContainer.innerHTML = `
             <div class="alert alert-danger">
@@ -134,7 +124,6 @@
             </div>
           `;
         }
-
       } catch (error) {
         console.error(error);
         alertContainer.innerHTML = `
@@ -142,16 +131,11 @@
             No se pudo conectar con el servidor
           </div>
         `;
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Iniciar sesión';
       }
     });
-  </script>
-
-  <!-- UI -->
-  <script type="module">
-    import { setTitle, loadFooter } from './js/ui.js';
-
-    setTitle('Login');
-    loadFooter();
   </script>
 
 </body>

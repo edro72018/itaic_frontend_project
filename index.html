@@ -3,11 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title></title>
   <link rel="icon" href="./assets/image.png">
-
-  <!-- Bootstrap -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
     rel="stylesheet"
@@ -27,14 +24,14 @@
     <div class="collapse navbar-collapse d-lg-flex" id="navbarMain">
 
       <!-- IZQUIERDA -->
-      <a class="navbar-brand col-lg-3 me-0" href="#">
+      <a class="navbar-brand col-lg-3 me-0" href="index.html">
         <img src="assets/image.png" alt="Logo" width="50" height="50" class="d-inline-block align-text-top">
       </a>
 
       <!-- CENTRO -->
       <ul class="navbar-nav col-lg-6 justify-content-lg-center">
         <li class="nav-item">
-          <a class="nav-link active" href="#">Inicio</a>
+          <a class="nav-link active" href="index.html">Inicio</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="#">Pénsum</a>
@@ -42,45 +39,46 @@
       </ul>
 
       <!-- DERECHA -->
-      <div class="d-lg-flex col-lg-3 justify-content-lg-end">
+      <div class="d-lg-flex col-lg-3 justify-content-lg-end align-items-center gap-2">
 
-  <div class="dropdown">
-    <button 
-      class="btn btn-outline-secondary dropdown-toggle"
-      type="button"
-      data-bs-toggle="dropdown"
-      aria-expanded="false"
-    >
-      👤 <span id="nav-username"></span>
-    </button>
-
-    <ul class="dropdown-menu dropdown-menu-end">
-
-      <li>
-        <a class="dropdown-item" href="#">
-          Perfil
-        </a>
-      </li>
-
-      <li>
-        <a class="dropdown-item" href="#">
-          Calificaciones
-        </a>
-      </li>
-
-      <li><hr class="dropdown-divider"></li>
-
-      <li>
-        <button class="dropdown-item text-danger" id="logout-btn">
-          Cerrar sesión
+        <!-- TOGGLE TEMA -->
+        <button class="btn btn-outline-secondary" id="theme-toggle" title="Cambiar tema">
+          <span id="theme-icon"></span>
         </button>
-      </li>
 
-    </ul>
-  </div>
+        <!-- MENÚ USUARIO -->
+        <div class="dropdown">
+          <button
+            class="btn btn-outline-secondary dropdown-toggle"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            👤 <span id="nav-username"></span>
+          </button>
 
-</div>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#">Perfil</a></li>
+            <li><a class="dropdown-item" href="#">Calificaciones</a></li>
 
+            <!-- Solo visible para admins -->
+            <li id="admin-divider" class="d-none"><hr class="dropdown-divider"></li>
+            <li id="admin-register-item" class="d-none">
+              <a class="dropdown-item text-warning" href="register.html">
+                ⚙️ Registrar usuario
+              </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button class="dropdown-item text-danger" id="logout-btn">
+                Cerrar sesión
+              </button>
+            </li>
+          </ul>
+        </div>
+
+      </div>
     </div>
   </div>
 </nav>
@@ -93,7 +91,7 @@
     <div class="row py-lg-4">
       <div class="col-lg-6 col-md-8 mx-auto">
         <h1 class="fw-light">
-          Bienvenido, <span id="username" >...</span>
+          Bienvenido, <span id="username">...</span>
         </h1>
         <p class="lead text-body-secondary" id="institucion"></p>
       </div>
@@ -103,22 +101,14 @@
   <!-- CURSOS -->
   <div class="album py-5 bg-body-tertiary">
     <div class="container">
-
       <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="courses-container">
-
-        <!-- EJEMPLO CARD -->
-        <div class="col">
-          <div class="card shadow-sm">
-            <div class="card-body">
-              <h5 class="card-title">Curso Explicación</h5>
-              <p class="card-text">Descripción breve del curso.</p>
-              <button class="btn btn-sm btn-primary">Ver curso</button>
-            </div>
+        <!-- Spinner inicial -->
+        <div class="col-12 text-center py-5">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Cargando cursos...</span>
           </div>
         </div>
-
       </div>
-
     </div>
   </div>
 
@@ -133,14 +123,35 @@
 <!-- APP -->
 <script type="module">
 import { setTitle, loadFooter } from './js/ui.js';
-import { requireAuth, authFetch } from './js/auth.js';
-import { INSTITUCION } from './js/config.js';
+import { requireAuth, authFetch, logout } from './js/auth.js';
+import { INSTITUCION, API_BASE_URL } from './js/config.js';
+import { initTheme, toggleTheme, getTheme } from './js/theme.js';
 
 setTitle('Inicio');
 requireAuth();
 loadFooter();
+initTheme();
 
-// Cargar usuario
+// --- TEMA ---
+function updateThemeIcon() {
+  document.getElementById('theme-icon').textContent = getTheme() === 'dark' ? '☀️' : '🌙';
+}
+
+updateThemeIcon();
+
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  toggleTheme();
+  updateThemeIcon();
+});
+
+// --- UTILIDADES ---
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+// --- USUARIO ---
 async function cargarUsuario() {
   try {
     const response = await authFetch(`${API_BASE_URL}/auth/me`);
@@ -148,32 +159,80 @@ async function cargarUsuario() {
 
     if (response.ok && result.success) {
       const user = result.data;
-      const full_name = `${user.first_name} ${user.last_name}`;
-      user.full_name = full_name;
+      const fullName = `${user.first_name} ${user.last_name}`;
 
-      document.getElementById('username').textContent = user.full_name;
-      document.getElementById('nav-username').textContent = user.full_name;
+      document.getElementById('username').textContent = fullName;
+      document.getElementById('nav-username').textContent = fullName;
+      document.getElementById('institucion').textContent = `${INSTITUCION} te da la bienvenida`;
 
-      document.getElementById('institucion').textContent =
-        INSTITUCION + ' te da la bienvenida';
-
-    } else {
-      console.error(result);
+      // Mostrar opciones de admin (verificación visual; el backend debe enforcearlo)
+      const isAdmin = user.role === 'admin' || user.is_admin === true;
+      if (isAdmin) {
+        document.getElementById('admin-divider').classList.remove('d-none');
+        document.getElementById('admin-register-item').classList.remove('d-none');
+      }
     }
   } catch (error) {
     console.error('Error al obtener usuario:', error);
   }
 }
 
+// --- CURSOS ---
+async function cargarCursos() {
+  const container = document.getElementById('courses-container');
+
+  try {
+    const response = await authFetch(`${API_BASE_URL}/courses`);
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      const courses = Array.isArray(result.data)
+        ? result.data
+        : (result.data?.courses ?? []);
+
+      if (courses.length === 0) {
+        container.innerHTML = `
+          <div class="col-12 text-center py-5 text-body-secondary">
+            <p class="mb-0">No tienes cursos asignados aún.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = courses.map(course => `
+        <div class="col">
+          <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">${escapeHTML(course.name || course.title || 'Sin título')}</h5>
+              <p class="card-text text-body-secondary flex-grow-1">${escapeHTML(course.description || '')}</p>
+              <button class="btn btn-sm btn-primary mt-2">Ver curso</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5 text-danger">
+          <p class="mb-0">No se pudieron cargar los cursos.</p>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Error al cargar cursos:', error);
+    container.innerHTML = `
+      <div class="col-12 text-center py-5 text-danger">
+        <p class="mb-0">Error de conexión al cargar los cursos.</p>
+      </div>
+    `;
+  }
+}
+
+// --- LOGOUT ---
+document.getElementById('logout-btn').addEventListener('click', logout);
+
+// --- INIT ---
 cargarUsuario();
-
-// Logout
-document.getElementById('logout-btn').addEventListener('click', () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  window.location.href = 'login.html';
-});
-
+cargarCursos();
 </script>
 
 </body>
