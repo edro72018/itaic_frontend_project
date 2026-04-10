@@ -272,7 +272,7 @@ document.getElementById('btn-guardar-curso').addEventListener('click', async () 
     : `${API_BASE_URL}/courses`;
 
   try {
-    const res    = await authFetch(url, { method, body: JSON.stringify({ name, description }) });
+    const res    = await authFetch(url, { method, body: JSON.stringify({ title: name, description }) });
     const result = await res.json();
 
     if (res.ok && result.success) {
@@ -280,10 +280,24 @@ document.getElementById('btn-guardar-curso').addEventListener('click', async () 
       showAlert('alert-global', `Curso ${isEdit ? 'actualizado' : 'creado'} exitosamente.`, 'success');
       cargarCursos();
     } else {
-      showAlert('modal-alert', result.message || 'No se pudo guardar el curso.');
+      let errMsg;
+      if (result.message) {
+        errMsg = result.message;
+      } else if (Array.isArray(result.detail)) {
+        // FastAPI devuelve una lista de errores de validación
+        errMsg = result.detail.map(e => {
+          const campo = e.loc?.slice(1).join('.') ?? '';
+          return campo ? `Campo "${campo}": ${e.msg}` : e.msg;
+        }).join('<br>');
+      } else if (result.detail) {
+        errMsg = result.detail;
+      } else {
+        errMsg = `Error ${res.status}: No se pudo guardar el curso.`;
+      }
+      showAlert('modal-alert', errMsg);
     }
-  } catch {
-    showAlert('modal-alert', 'Error de conexión.');
+  } catch (err) {
+    showAlert('modal-alert', `Error de conexión: ${err.message}`);
   } finally {
     btn.disabled = false;
     btn.textContent = 'Guardar';
